@@ -7,6 +7,7 @@ import threading
 import requests
 import time
 import json
+import shutil
 
 app = Flask(__name__)
 
@@ -53,10 +54,17 @@ def download():
         "merge_output_format": "mp4",
     }
 
-    # use Instagram/TikTok login cookies if provided (Render Secret File)
+    # use Instagram/TikTok login cookies if provided (Render Secret File).
+    # yt-dlp writes the cookie jar back, so copy it to a writable location
+    # first (Render Secret Files are mounted read-only).
     for cookie_path in ["/etc/secrets/cookies.txt", "cookies.txt"]:
         if os.path.exists(cookie_path):
-            ydl_opts["cookiefile"] = cookie_path
+            writable_cookie = os.path.join(tempfile.gettempdir(), "yt_cookies.txt")
+            try:
+                shutil.copy(cookie_path, writable_cookie)
+                ydl_opts["cookiefile"] = writable_cookie
+            except Exception:
+                ydl_opts["cookiefile"] = cookie_path
             break
 
     try:
